@@ -35,6 +35,8 @@
             <div class="mt-1 relative rounded-md shadow-md">
               <input
                 v-model="tiker"
+                @keyup.enter="add()"
+                @keydown="addError = false"
                 type="text"
                 name="wallet"
                 id="wallet"
@@ -43,11 +45,11 @@
               />
             </div>
             <div
-              v-if="filteredCoins.length"
+              v-if="filteredCoins().length"
               class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
             >
               <span
-                v-for="coin in filteredCoins"
+                v-for="coin in filteredCoins()"
                 :key="coin.id"
                 @click="add(coin.name)"
                 class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
@@ -55,7 +57,9 @@
                 {{ coin.name }}
               </span>
             </div>
-            <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
+            <div v-if="addError" class="text-sm text-red-600">
+              Такой тикер уже добавлен
+            </div>
           </div>
         </div>
         <button
@@ -79,47 +83,48 @@
           Добавить
         </button>
       </section>
-
-      <hr class="w-full border-t border-gray-600 my-4" />
-      <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <div
-          v-for="tik in tikers"
-          :key="tik.name"
-          @click="selectTik(tik)"
-          :class="{ 'border-4': sel === tik }"
-          class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
-        >
-          <div class="px-4 py-5 sm:p-6 text-center">
-            <dt class="text-sm font-medium text-gray-500 truncate">
-              {{ tik.name }} - USD
-            </dt>
-            <dd class="mt-1 text-3xl font-semibold text-gray-900">
-              {{ tik.price }}
-            </dd>
-          </div>
-          <div class="w-full border-t border-gray-200"></div>
-          <button
-            @click.stop="delTik(tik)"
-            class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
+      <template v-if="tikers.length">
+        <hr class="w-full border-t border-gray-600 my-4" />
+        <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
+          <div
+            v-for="tik in tikers"
+            :key="tik.name"
+            @click="selectTik(tik)"
+            :class="{ 'border-4': sel === tik }"
+            class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
-            <svg
-              class="h-5 w-5"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="#718096"
-              aria-hidden="true"
+            <div class="px-4 py-5 sm:p-6 text-center">
+              <dt class="text-sm font-medium text-gray-500 truncate">
+                {{ tik.name }} - USD
+              </dt>
+              <dd class="mt-1 text-3xl font-semibold text-gray-900">
+                {{ tik.price }}
+              </dd>
+            </div>
+            <div class="w-full border-t border-gray-200"></div>
+            <button
+              @click.stop="delTik(tik)"
+              class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
             >
-              <path
-                fill-rule="evenodd"
-                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              ></path>
-            </svg>
-            Удалить
-          </button>
-        </div>
-      </dl>
-      <hr class="w-full border-t border-gray-600 my-4" />
+              <svg
+                class="h-5 w-5"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="#718096"
+                aria-hidden="true"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                  clip-rule="evenodd"
+                ></path>
+              </svg>
+              Удалить
+            </button>
+          </div>
+        </dl>
+        <hr class="w-full border-t border-gray-600 my-4" />
+      </template>
       <section class="relative" v-if="sel">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ sel.name }} - USD
@@ -176,25 +181,39 @@ export default {
       graph: [],
       coins: [],
       sel: null,
+      addError: false,
     };
   },
   methods: {
-    add(name = this.tiker) {
-      const newTiker = { name: name, price: "-" };
-      this.tikers.push(newTiker);
-
-      const currentTicker = this.tikers[this.tikers.length - 1];
-      newTiker.timer = setInterval(async () => {
-        const src = await fetch(API_URL.replace("###", currentTicker.name));
+    subscribeToUpdate(tickerName) {
+      return setInterval(async () => {
+        const src = await fetch(API_URL.replace("###", tickerName));
         const rez = await src.json();
         console.log(rez);
-        currentTicker.price =
+        this.tikers.find((t) => t.name === tickerName).price =
           rez.USD > 1 ? rez.USD.toFixed(2) : rez.USD.toPrecision(2);
 
-        if (this.sel && newTiker.name === this.sel.name) {
+        if (this.sel && tickerName === this.sel.name) {
           this.graph.push(rez.USD);
         }
       }, 5000);
+    },
+    add(name = this.tiker.toUpperCase()) {
+      this.addError = false;
+      const newTiker = { name: name, price: "-" };
+
+      if (this.tikers.some((t) => t.name === name)) {
+        this.addError = true;
+        return;
+      }
+
+      this.tikers.push(newTiker);
+      // Сохраняем
+      localStorage.setItem("criptonomicon-list", JSON.stringify(this.tikers));
+      // Обновление цены
+      this.tikers.find((t) => t.name === newTiker.name).timer =
+        this.subscribeToUpdate(newTiker.name);
+
       this.tiker = "";
     },
     normalizeGraph() {
@@ -210,19 +229,24 @@ export default {
       clearInterval(tik.timer);
       this.tikers = this.tikers.filter((t) => t !== tik);
     },
-  },
-  computed: {
     filteredCoins() {
       if (!this.tiker) return [];
       return (
         this.coins
           .filter((coin) => coin.name.indexOf(this.tiker.toUpperCase()) !== -1)
-
           .slice(0, 4) || []
       );
     },
   },
+
   created() {
+    const tickers = localStorage.getItem("criptonomicon-list");
+    if (tickers) {
+      this.tikers = JSON.parse(tickers);
+      this.tikers.forEach((item) => {
+        this.subscribeToUpdate(item.name);
+      });
+    }
     fetch(
       `https://min-api.cryptocompare.com/data/all/coinlist?summary=true&api_key=${APP_KEY}`
     )
